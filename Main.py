@@ -2,13 +2,33 @@ import cv2
 import numpy as np
 import funcoes as fn
 import math
+import serial
+import time
 
+# Configurações da porta serial - ajuste-as conforme necessário
+porta_serial = "COM5"  # Substitua "COMX" pela porta serial do seu ESP32
+baud_rate = 115200
+
+def extract_roi(image):
+
+    y_start = 0
+    y_end = 150
+
+    y_start = max(0, y_start)
+    y_end = min(image.shape[0], y_end)
+
+    # Defina a ROI usando slicing
+    roi = image[y_start:y_end, :]
+    cv2.imshow('roi',roi)
+   
+    return roi
 
 def thresholding(img):
     imgHsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
     lowerWhite = np.array([0,0,180])
     upperWhite = np.array([180,255,255])
     maskWhite = cv2.inRange(imgHsv,lowerWhite,upperWhite)
+    maskROI = extract_roi(maskWhite)
     return  maskWhite
 
 def getLaneCurve(img):
@@ -166,13 +186,30 @@ def calculate_distance(circle1_center, circle2_center):
     return distance
 
 
+def enviar_ESP(distance,ser):
+
+    if distance > 10:
+        ser.write(b'd')
+        print("Enviando 'd' para ESP32")
+    elif distance < -10:
+        ser.write(b'e')
+        print("Enviando 'e' para ESP32")
+    else:
+        print("Valor não atende aos critérios para envio de comando.")
+    
+
+
+
 
 if __name__ =='__main__':   
 
     cap = cv2.VideoCapture('teste1.mp4')
     initialTrackBarVals = [0,0,0,100]
     initializeTrackbars(initialTrackBarVals)
-    
+    ser = serial.Serial(porta_serial, baud_rate, timeout=1)
+    print("Porta serial aberta com sucesso.")
+    window_size = 5
+    previous_x_readings = []  # Lista para armazenar as coordenadas x das leituras anteriores
 
     while True:
         sucess, img = cap.read()
@@ -187,13 +224,18 @@ if __name__ =='__main__':
         circle2_center = location_car_position(img)
 
         distance = calculate_distance(circle1_center, circle2_center)       
-        
+
+        enviar_ESP(distance, ser)
+
         if car_position_info:
-            car_position, distance_to_left_lane, distance_to_right_lane = car_position_info
-            
-            #print(f"Car Position: {car_position}")
-            #print(f"Distance to Left Lane: {distance_to_left_lane}")
-            #print(f"Distance to Right Lane: {distance_to_right_lane}")
+            car_position, _, _ = car_position_info  # Você pode escolher usar car_position ou outra métrica relevante
+            previous_x_readings.append(car_position[0])  # Armazena apenas o componente x
+
+       
+            if len(previous_x_readings) > window_size:
+                previous_x_readings.pop(0)
+        
+            smoothed_x_position = sum(previous_x_readings) / len(previous_x_readings)
             print(f"Distancia: {distance}")
 
         getLaneCurve(img)
