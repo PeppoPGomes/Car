@@ -1,0 +1,187 @@
+#include <BluetoothSerial.h>
+BluetoothSerial ESP_BT;
+#define BRAKE 0
+#define CW    1
+#define CCW   2
+#define CS_THRESHOLD 20
+#define MOTOR_1 0
+#define MOTOR_A1_PIN 27
+#define MOTOR_B1_PIN 26
+#define PWM_MOTOR_1 13
+#define CURRENT_SEN_1 34
+#define EN_PIN_1 12
+#define MOTOR_2 1
+#define MOTOR_A2_PIN 14
+#define MOTOR_B2_PIN 19
+#define PWM_MOTOR_2 16
+#define CURRENT_SEN_2 21
+#define EN_PIN_2 4
+short usSpeed = 70;
+unsigned short usMotor_Status = BRAKE;
+const int blueLedPin = 2; // Pino para controlar o LED azul
+
+void setup() {
+  Serial.begin(115200);
+  ESP_BT.begin("ESP32_BT LEO");
+  Serial.println("Bluetooth Device is Ready to Pair");
+
+  // Configurar pinos dos motores e LED
+  pinMode(MOTOR_A1_PIN, OUTPUT);
+  pinMode(MOTOR_B1_PIN, OUTPUT);
+  pinMode(PWM_MOTOR_1, OUTPUT);
+  pinMode(CURRENT_SEN_1, INPUT); // Alterado para entrada
+  pinMode(EN_PIN_1, OUTPUT);
+  pinMode(MOTOR_A2_PIN, OUTPUT);
+  pinMode(MOTOR_B2_PIN, OUTPUT);
+  pinMode(PWM_MOTOR_2, OUTPUT);
+  pinMode(CURRENT_SEN_2, INPUT); // Alterado para entrada
+  pinMode(EN_PIN_2, OUTPUT);
+  pinMode(blueLedPin, OUTPUT); // Adicionado para controlar o LED azul
+
+  // Desligar o LED azul no início
+  digitalWrite(blueLedPin, LOW);
+
+  Serial.println("Begin motor control");
+  Serial.println();
+  Serial.println("Enter number for control option:");
+  Serial.println("1. STOP");
+  Serial.println("2. FORWARD");
+  Serial.println("3. REVERSE");
+  Serial.println("+. INCREASE SPEED");
+  Serial.println("-. DECREASE SPEED");
+  Serial.println();
+}
+
+void loop() {
+  char user_input;
+  while (Serial.available()) {
+    user_input = Serial.read();
+    digitalWrite(EN_PIN_1, HIGH);
+    digitalWrite(EN_PIN_2, HIGH);
+
+    if (user_input == '1') {
+      Stop();
+    }
+    else if (user_input == '2') {
+      Forward();
+    }
+    else if (user_input == '3') {
+      Reverse();
+    }
+    else if (user_input == '+') {
+      IncreaseSpeed();
+    }
+    else if (user_input == '-') {
+      DecreaseSpeed();
+    }
+    else {
+      Serial.println("Invalid option entered.");
+    }
+  }
+
+  if (ESP_BT.available()) {
+    char receivedValue = ESP_BT.read();
+    Serial.write(receivedValue);
+
+    if (receivedValue == '1') {
+      Stop();
+    }
+    else if (receivedValue == '2') {
+      Forward();
+    }
+    else if (receivedValue == '3') {
+      Reverse();
+      
+      // Adicione este código para acender o LED D2 quando a variável 3 for recebida
+      digitalWrite(blueLedPin, HIGH);
+    }
+    else if (receivedValue == '+') {
+      IncreaseSpeed();
+    }
+    else if (receivedValue == '-') {
+      DecreaseSpeed();
+    }
+  }
+}
+
+void Stop() {
+  Serial.println("Stop");
+  usMotor_Status = BRAKE;
+  motorGo(MOTOR_1, usMotor_Status, 0);
+  motorGo(MOTOR_2, usMotor_Status, 0);
+}
+
+void Forward() {
+  Serial.println("Forward");
+  usMotor_Status = CW;
+  motorGo(MOTOR_1, usMotor_Status, usSpeed);
+  motorGo(MOTOR_2, usMotor_Status, usSpeed);
+}
+
+void Reverse() {
+  Serial.println("Reverse");
+  usMotor_Status = CCW;
+  motorGo(MOTOR_1, usMotor_Status, usSpeed);
+  motorGo(MOTOR_2, usMotor_Status, usSpeed);
+}
+
+void IncreaseSpeed() {
+  usSpeed += 10;
+  if (usSpeed > 255) {
+    usSpeed = 70;
+  }
+
+  Serial.print("Speed +: ");
+  Serial.println(usSpeed);
+
+  motorGo(MOTOR_1, usMotor_Status, usSpeed);
+  motorGo(MOTOR_2, usMotor_Status, usSpeed);
+}
+
+void DecreaseSpeed() {
+  usSpeed -= 10;
+  if (usSpeed < 0) {
+    usSpeed = 0;
+  }
+
+  Serial.print("Speed -: ");
+  Serial.println(usSpeed);
+
+  motorGo(MOTOR_1, usMotor_Status, usSpeed);
+  motorGo(MOTOR_2, usMotor_Status, usSpeed);
+}
+
+void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm) {
+  if (motor == MOTOR_1) {
+    if (direct == CW) {
+      digitalWrite(MOTOR_A1_PIN, LOW);
+      digitalWrite(MOTOR_B1_PIN, HIGH);
+    }
+    else if (direct == CCW) {
+      digitalWrite(MOTOR_A1_PIN, HIGH);
+      digitalWrite(MOTOR_B1_PIN, LOW);
+    }
+    else {
+      digitalWrite(MOTOR_A1_PIN, LOW);
+      digitalWrite(MOTOR_B1_PIN, LOW);
+    }
+
+    analogWrite(PWM_MOTOR_1, pwm);
+  }
+  else if (motor == MOTOR_2) {
+    if (direct == CW) {
+      digitalWrite(MOTOR_A2_PIN, LOW);
+      digitalWrite(MOTOR_B2_PIN, HIGH);
+    }
+    else if (direct == CCW) {
+      digitalWrite(MOTOR_A2_PIN, HIGH);
+      digitalWrite(MOTOR_B2_PIN, LOW);
+    }
+    else {
+      digitalWrite(MOTOR_A2_PIN, LOW);
+      digitalWrite(MOTOR_B2_PIN, LOW);
+    }
+
+    analogWrite(PWM_MOTOR_2, pwm);
+  }
+}
