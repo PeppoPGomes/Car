@@ -1,0 +1,39 @@
+#include <AccelStepper.h>
+
+const int stepPin = 18; 
+const int dirPin = 19; 
+const int enPin = 21;
+
+AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin);
+
+void setup() {
+  Serial.begin(115200); // Iniciar a comunicação serial
+  Serial.println("Aguardando comando pela porta serial...");
+
+  pinMode(stepPin, OUTPUT); 
+  pinMode(dirPin, OUTPUT);
+  pinMode(enPin, OUTPUT);
+  digitalWrite(enPin, LOW);
+  
+  stepper.setMaxSpeed(1000);         // Velocidade máxima do motor de passo
+  stepper.setAcceleration(500);      // Aceleração do motor de passo
+  stepper.setCurrentPosition(0);     // Define a posição atual como 0
+}
+
+void loop() {
+  if (Serial.available() > 0) { // Verificar se há dados disponíveis na porta serial
+    char command = Serial.read(); // Ler o comando da porta serial
+    
+    if (command == 'E' || command == 'e') {
+      stepper.moveTo(stepper.currentPosition() - 100); // Move 100 passos para a esquerda
+      stepper.runToPosition(); // Move gradualmente para a nova posição
+    } 
+    else if (command == 'D' || command == 'd') {
+      stepper.moveTo(stepper.currentPosition() + 100); // Move 100 passos para a direita
+      stepper.runToPosition(); // Move gradualmente para a nova posição
+    }
+    else {
+      Serial.println("Erro: Comando inválido recebido pela porta serial");
+    }
+  }
+}
