@@ -1,5 +1,6 @@
 #include <BluetoothSerial.h>
 BluetoothSerial ESP_BT;
+#include <Ultrasonic.h>
 #define BRAKE 0
 #define CW    1
 #define CCW   2
@@ -16,10 +17,12 @@ BluetoothSerial ESP_BT;
 #define PWM_MOTOR_2 16
 #define CURRENT_SEN_2 21
 #define EN_PIN_2 4
+#define TRIGGER_PIN 32
+#define ECHO_PIN 33
 short usSpeed = 70;
 unsigned short usMotor_Status = BRAKE;
 const int blueLedPin = 2; // Pino para controlar o LED azul
-
+Ultrasonic ultrasonic(TRIGGER_PIN, ECHO_PIN);
 void setup() {
   Serial.begin(115200);
   ESP_BT.begin("ESP32_BT LEO");
@@ -100,8 +103,21 @@ void loop() {
     }
     else if (receivedValue == '-') {
       DecreaseSpeed();
+      
     }
+  
+
+  } 
+  float distancia = ultrasonic.read();
+  Serial.println(distancia);
+  delay(100);
+  if (distancia < 30 && distancia> 0) {
+    Stop();
   }
+
+
+
+
 }
 
 void Stop() {
