@@ -16,7 +16,7 @@ baud_rate = 115200
 def extract_roi(image):
 
  
-    roi_coordinates = (0, 200, 640, 480)
+    roi_coordinates = (0, 150, 640, 480)
     x1, y1, x2, y2 = roi_coordinates
     
     return image[y1:y2, x1:x2]
@@ -24,8 +24,8 @@ def extract_roi(image):
 
 def thresholding(img):
     imgHsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
-    lowerWhite = np.array([0,0,230])
-    upperWhite = np.array([230,255,255])
+    lowerWhite = np.array([0,0,220])
+    upperWhite = np.array([220,255,255])
     maskWhite = cv2.inRange(imgHsv,lowerWhite,upperWhite)
     maskROI = extract_roi(maskWhite)
     return  maskROI
@@ -202,6 +202,8 @@ historicoComando2= 'inicio'
 historicoComando3= 'inicio'
 last_command_time2=0
 last_command_time3=0
+sentido = 0
+
 def enviarComandoESP32(distance_x1, distance_x2,distance_x3,distance_x4, distance_x5, distance_x6, ser):
     current_time = time.time()
     current_time2 = time.time()
@@ -209,107 +211,120 @@ def enviarComandoESP32(distance_x1, distance_x2,distance_x3,distance_x4, distanc
     global last_command_time
     global last_command_time2
     global last_command_time3
-    delay_seconds = 0.6
+    delay_seconds = 0.8
     global historicoComando
     global historicoComando2
     global historicoComando3
+    global sentido
+      
+    if distance_x1 != (0, 0) and distance_x2 == (0, 0) and historicoComando2 == 'inicio':
+        sentido = 'direita'
 
-    if distance_x1 == (0, 0) and distance_x2 == (0, 0) and historicoComando =='inicio':
-        pass  # Não há interseção em ambas as linhas, nenhum comando é enviado
-        
-    elif distance_x1 == (0, 0) and distance_x2 == (0, 0) and historicoComando =='d' and historicoComando3 == 'inicio':
-        if time.time() - last_command_time >= delay_seconds:
-            ser.write(b'e')  
-            print("Enviando 'e' para ESP32")
-            last_command_time = current_time
-            historicoComando = 'inicio'
-    elif distance_x1 == (0, 0) and distance_x2 == (0, 0) and historicoComando =='e'and historicoComando3 == 'inicio':
-            if time.time() - last_command_time >= delay_seconds:
-                ser.write(b'd')  
-                print("Enviando 'd' para ESP32")
-                last_command_time = current_time
-                historicoComando = 'inicio'
-    elif distance_x1 != (0, 0) and distance_x2 == (0, 0) and historicoComando != 'd':
+    elif distance_x1 == (0, 0) and distance_x2 != (0, 0) and historicoComando2 == 'inicio':
+        sentido = 'esquerda'
+
+    elif distance_x1 == (0, 0) and distance_x2 == (0, 0) and historicoComando2 == 'inicio':
+        sentido = 'reto'
+
+    #Movimento Linha Preta
+    if distance_x1 != (0, 0) and distance_x2 == (0, 0) and historicoComando != 'd' and sentido != 'esquerda':
             if time.time() - last_command_time >= delay_seconds:
                 ser.write(b'd')  
                 print("Enviando 'd' para ESP32")
                 last_command_time = current_time
                 historicoComando = 'd'
-    elif distance_x1 == (0, 0) and distance_x2 != (0, 0) and historicoComando != 'e':
+
+    elif distance_x1 == (0, 0) and distance_x2 != (0, 0) and historicoComando != 'e' and sentido != 'direita':
             if time.time() - last_command_time >= delay_seconds:
                 ser.write(b'e')  
                 print("Enviando 'e' para ESP32")
                 last_command_time = current_time
                 historicoComando = 'e'
-                #----------------------------
-    if distance_x3 == (0, 0) and distance_x4 == (0, 0) and historicoComando2 =='inicio':
-            pass  # Não há interseção em ambas as linhas, nenhum comando é enviado
-            
-    elif distance_x3 == (0, 0) and distance_x4 == (0, 0) and historicoComando2 =='r' and historicoComando3 == 'inicio':
-        if time.time() - last_command_time2 >= delay_seconds:
-            ser.write(b'l')  
-            print("Enviando 'l' para ESP32")
-            last_command_time2 = current_time2
-            historicoComando2 = 'inicio'
 
-    elif distance_x3 == (0, 0) and distance_x4 == (0, 0) and historicoComando2 =='l' and historicoComando3 == 'inicio':
-        if time.time() - last_command_time2>= delay_seconds:
-            ser.write(b'r')  
-            print("Enviando 'r' para ESP32")
-            last_command_time2 = current_time2
-            historicoComando2 = 'inicio'
-    elif distance_x3 != (0, 0) and distance_x4 == (0, 0)and historicoComando2 != 'r' and distance_x1 != (0, 0) and distance_x2 == (0, 0):
+    #Retorno Linha Preta
+
+    elif distance_x1 == (0, 0) and distance_x2 == (0, 0) and historicoComando =='d' and historicoComando2 == 'inicio':
+        if time.time() - last_command_time >= delay_seconds:
+            ser.write(b'e')  
+            print("RETORNO ESQUERDA E ")
+            last_command_time = current_time
+            historicoComando = 'inicio'
+            sentido = 'esquerda'
+
+    elif distance_x1 == (0, 0) and distance_x2 == (0, 0) and historicoComando =='e'and historicoComando2 == 'inicio':
+            if time.time() - last_command_time >= delay_seconds:
+                ser.write(b'd')  
+                print("RETORNO DIREITA D")
+                last_command_time = current_time
+                historicoComando = 'inicio'
+                sentido = 'direita'
+
+  
+                #----------------------------
+ #Movimento Linha Azul
+
+    if distance_x3 != (0, 0) and historicoComando2 != 'r' and sentido != 'esquerda':
         if time.time() - last_command_time2 >= delay_seconds:
             ser.write(b'r')  
             print("Enviando 'r' para ESP32")
             last_command_time2 = current_time2
             historicoComando2 = 'r'
-    elif distance_x3 == (0, 0) and distance_x4 != (0, 0) and historicoComando2 != 'l' and distance_x1 == (0, 0) and distance_x2 != (0, 0):
+    elif distance_x4 != (0, 0) and historicoComando2 != 'l' and sentido != 'direita':
         if time.time() - last_command_time2 >= delay_seconds:
             ser.write(b'l')  
             print("Enviando 'l' para ESP32")
             last_command_time2 = current_time2
             historicoComando2 = 'l'        
 
-            #-------------------
-    if distance_x5 == (0, 0) and distance_x5 == (0, 0) and historicoComando3 =='inicio':
-            pass  # Não há interseção em ambas as linhas, nenhum comando é enviado
-            
-    elif distance_x5 == (0, 0) and distance_x6 == (0, 0) and historicoComando3 =='p' and distance_x1 != (0,0):
-        if time.time() - last_command_time3 >= delay_seconds:
-            ser.write(b'f')  
-            print("Enviando 'f' para ESP32")
-            last_command_time3 = current_time3
-            historicoComando3 = 'inicio'
+    #Retorno Linha Azul        
 
-    elif distance_x5 == (0, 0) and distance_x6 == (0, 0) and historicoComando3 =='f' and distance_x1 != (0,0):
+    elif distance_x3 == (0, 0) and distance_x4 == (0, 0) and historicoComando2 =='r' and distance_x1 != (0, 0):
+        if time.time() - last_command_time2 >= delay_seconds:
+            ser.write(b'l')  
+            print("RETORNO ESQUERDA L")
+            last_command_time2 = current_time2
+            historicoComando2 = 'inicio'
+            sentido = 'esquerda'
+
+    elif distance_x3 == (0, 0) and distance_x4 == (0, 0) and historicoComando2 =='l' and distance_x2 != (0, 0):
         if time.time() - last_command_time2>= delay_seconds:
-            ser.write(b'p')  
-            print("Enviando 'p' para ESP32")
-            last_command_time3 = current_time3
-            historicoComando3 = 'inicio'
-    elif distance_x5 != (0, 0) and distance_x6 == (0, 0) and historicoComando3 != 'p' and distance_x1 != (0, 0)and distance_x3 != (0, 0)  and distance_x2 == (0, 0) and distance_x4 == (0, 0):
+            ser.write(b'r')  
+            print("RETORNO DIREITA R")
+            last_command_time2 = current_time2
+            historicoComando2 = 'inicio'
+            sentido = 'direita'
+
+
+    elif distance_x5 != (0, 0) and historicoComando3 != 'r' and sentido != 'esquerda':
         if time.time() - last_command_time3 >= delay_seconds:
-            ser.write(b'p')  
-            print("Enviando 'p' para ESP32")
-            last_command_time3 = current_time3
-            historicoComando3 = 'p'
-    elif distance_x5 == (0, 0) and distance_x6 != (0, 0) and historicoComando3 != 'f' and distance_x1 == (0, 0) and distance_x3 == (0, 0) and distance_x2 != (0, 0) and distance_x4 != (0, 0):
+            ser.write(b'r')  
+            print("Enviando 'r' para ESP32")
+            last_command_time3 = current_time2
+            historicoComando3 = 'r'
+            sentido = 'direita'
+    elif distance_x6 != (0, 0) and historicoComando3 != 'l' and sentido != 'direita':
         if time.time() - last_command_time3 >= delay_seconds:
-            ser.write(b'f')  
-            print("Enviando 'f' para ESP32")
-            last_command_time3 = current_time3
-            historicoComando3 = 'f'        
+            ser.write(b'l')  
+            print("Enviando 'l' para ESP32")
+            last_command_time3 = current_time2
+            historicoComando3 = 'l'  
+            sentido = 'esquerda'      
+
+    
+
+
 
 
 def linhasVerticais(thresh, img):
 # Inicialize as posições das linhas
-    linha1_x1, linha1_y1, linha1_x2, linha1_y2 = 185, 30, 185, 600
-    linha2_x1, linha2_y1, linha2_x2, linha2_y2 = 460, 30, 460, 600
-    linha3_x1, linha3_y1, linha3_x2, linha3_y2 = 185, 90, 185, 600
-    linha4_x1, linha4_y1, linha4_x2, linha4_y2 = 460, 90, 460, 600
-    linha5_x1, linha5_y1, linha5_x2, linha5_y2 = 185, 160, 185, 600
-    linha6_x1, linha6_y1, linha6_x2, linha6_y2 = 460, 160, 460, 600
+
+    linha1_x1, linha1_y1, linha1_x2, linha1_y2 = 185, 10, 185, 600
+    linha2_x1, linha2_y1, linha2_x2, linha2_y2 = 460, 10, 460, 600
+    linha3_x1, linha3_y1, linha3_x2, linha3_y2 = 185, 150, 185, 600
+    linha4_x1, linha4_y1, linha4_x2, linha4_y2 = 460, 150, 460, 600
+    linha5_x1, linha5_y1, linha5_x2, linha5_y2 = 185, 250, 185, 600
+    linha6_x1, linha6_y1, linha6_x2, linha6_y2 = 460, 250, 460, 600
+
 
     # Inicialize as listas para armazenar as coordenadas de interseção para cada linha
     intersecoes_linha1 = []
@@ -324,8 +339,8 @@ def linhasVerticais(thresh, img):
     cv2.line(line, (linha2_x1, linha2_y1), (linha2_x2, linha2_y2), (0, 0, 0), 20)
     cv2.line(line, (linha3_x1, linha3_y1), (linha3_x2, linha3_y2), (255, 0, 0), 20)
     cv2.line(line, (linha4_x1, linha4_y1), (linha4_x2, linha4_y2), (255, 0, 0), 20)
-    cv2.line(line, (linha5_x1, linha5_y1), (linha5_x2, linha5_y2), (0, 255, 0), 20)
-    cv2.line(line, (linha6_x1, linha6_y1), (linha6_x2, linha6_y2), (0, 255, 0), 20)
+    cv2.line(line, (linha3_x1, linha5_y1), (linha3_x2, linha3_y2), (0, 255, 0), 20)
+    cv2.line(line, (linha4_x1, linha6_y1), (linha4_x2, linha4_y2), (0, 255, 0), 20)
 
 
     # Loop para verificar a primeira linha
@@ -459,6 +474,7 @@ if __name__ =='__main__':
         cv2.putText(img, str(distanciaL4), (10, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         cv2.putText(img, str(distanciaL5), (10, 250), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         cv2.putText(img, str(distanciaL6), (10, 300), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
         cv2.imshow('Vid', img)
         cv2.imshow('ROI',thresh)
         cv2.imshow('Lines', Line)
