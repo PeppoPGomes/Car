@@ -1,203 +1,194 @@
+  //const int sensorPin = 5;  // Pino digital onde o sensor de inclinação está conectado
 #include <BluetoothSerial.h>
-BluetoothSerial ESP_BT;
+#include <ESP32Encoder.h>
 #include <Ultrasonic.h>
-#define BRAKE 0
-#define CW    1
-#define CCW   2
-#define CS_THRESHOLD 20
-#define MOTOR_1 0
-#define MOTOR_A1_PIN 27
-#define MOTOR_B1_PIN 26
-#define PWM_MOTOR_1 13
-#define CURRENT_SEN_1 34
-#define EN_PIN_1 12
-#define MOTOR_2 1
-#define MOTOR_A2_PIN 14
-#define MOTOR_B2_PIN 19
-#define PWM_MOTOR_2 16
-#define CURRENT_SEN_2 21
-#define EN_PIN_2 4
-#define TRIGGER_PIN 32
-#define ECHO_PIN 33
-short usSpeed = 70;
-unsigned short usMotor_Status = BRAKE;
-const int blueLedPin = 2; // Pino para controlar o LED azul
+
+#define sensorVelocidade 
+BluetoothSerial ESP_BT;
+
+int Motor1_Direita = 2;
+int Motor1_Esquerda = 15;
+int Motor2_Direita = 16;
+int Motor2_Esquerda = 4;
+int velocidadeInicial = 75;
+int velocidadeAtual = 0;
+
+ESP32Encoder encoder;
+long lastCount = 0;
+
+#define TRIGGER_PIN 14
+#define ECHO_PIN 12
 Ultrasonic ultrasonic(TRIGGER_PIN, ECHO_PIN);
+int identificou = 0;
+
+
+
 void setup() {
-  Serial.begin(115200);
+ // pinMode(sensorPin, INPUT);
+  pinMode(Motor1_Direita, OUTPUT);
+  pinMode(Motor1_Esquerda, OUTPUT);
+  pinMode(Motor2_Direita, OUTPUT);
+  pinMode(Motor2_Esquerda, OUTPUT);
   ESP_BT.begin("ESP32_BT LEO");
   Serial.println("Bluetooth Device is Ready to Pair");
 
-  // Configurar pinos dos motores e LED
-  pinMode(MOTOR_A1_PIN, OUTPUT);
-  pinMode(MOTOR_B1_PIN, OUTPUT);
-  pinMode(PWM_MOTOR_1, OUTPUT);
-  pinMode(CURRENT_SEN_1, INPUT); // Alterado para entrada
-  pinMode(EN_PIN_1, OUTPUT);
-  pinMode(MOTOR_A2_PIN, OUTPUT);
-  pinMode(MOTOR_B2_PIN, OUTPUT);
-  pinMode(PWM_MOTOR_2, OUTPUT);
-  pinMode(CURRENT_SEN_2, INPUT); // Alterado para entrada
-  pinMode(EN_PIN_2, OUTPUT);
-  pinMode(blueLedPin, OUTPUT); // Adicionado para controlar o LED azul
+  encoder.attachFullQuad(sensorVelocidade);
 
-  // Desligar o LED azul no início
-  digitalWrite(blueLedPin, LOW);
-
-  Serial.println("Begin motor control");
-  Serial.println();
-  Serial.println("Enter number for control option:");
-  Serial.println("1. STOP");
-  Serial.println("2. FORWARD");
-  Serial.println("3. REVERSE");
-  Serial.println("+. INCREASE SPEED");
-  Serial.println("-. DECREASE SPEED");
-  Serial.println();
+  Serial.begin(115200); // Inicializa a comunicação Serial
+  Serial.println("Digite o comando");
 }
 
-void loop() {
-  char user_input;
-  while (Serial.available()) {
-    user_input = Serial.read();
-    digitalWrite(EN_PIN_1, HIGH);
-    digitalWrite(EN_PIN_2, HIGH);
+void Iniciar() {
+  analogWrite(Motor1_Esquerda, velocidadeInicial);
+  analogWrite(Motor1_Direita, 0);
+  analogWrite(Motor2_Esquerda, velocidadeInicial);
+  analogWrite(Motor2_Direita, 0);
+  velocidadeAtual = velocidadeInicial;
+}
 
-    if (user_input == '1') {
-      Stop();
-    }
-    else if (user_input == '2') {
-      Forward();
-    }
-    else if (user_input == '3') {
-      Reverse();
-    }
-    else if (user_input == '+') {
-      IncreaseSpeed();
-    }
-    else if (user_input == '-') {
-      DecreaseSpeed();
-    }
-    else {
-      Serial.println("Invalid option entered.");
+void Parar() {
+  analogWrite(Motor1_Esquerda, 0);
+  analogWrite(Motor1_Direita, 0);
+  analogWrite(Motor2_Esquerda, 0);
+  analogWrite(Motor2_Direita, 0);
+}
+
+void MarchaRe() {
+  analogWrite(Motor1_Esquerda, 0);
+  analogWrite(Motor1_Direita, velocidadeInicial);
+  analogWrite(Motor2_Esquerda, 0);
+  analogWrite(Motor2_Direita, velocidadeInicial);
+}
+
+void Acelerar() {
+  velocidadeAtual = velocidadeAtual + 20;
+  analogWrite(Motor1_Esquerda, velocidadeAtual);
+  analogWrite(Motor1_Direita, 0);
+  analogWrite(Motor2_Esquerda, velocidadeAtual);
+  analogWrite(Motor2_Direita, 0);
+
+  if (velocidadeAtual > 255) {
+    velocidadeInicial = 255;
+  }
+}
+
+void Diminuir() {
+  velocidadeAtual = velocidadeAtual - 20;
+  analogWrite(Motor1_Esquerda, velocidadeAtual);
+  analogWrite(Motor1_Direita, 0);
+  analogWrite(Motor2_Esquerda, velocidadeAtual);
+  analogWrite(Motor2_Direita, 0);
+
+  if (velocidadeAtual < 0) {
+    velocidadeAtual = 0;
+  }
+}
+
+///void Inclinado()
+//{
+//  Serial.println("Carro na rampa");
+ // int verificador = digitalRead(sensorPin);
+
+//  int i = 0; 
+ // bool verificadorDeVez = false;
+  //while(verificador == LOW);
+  //{
+   // if (verificadorDeVez == false) 
+    //{
+     // for(velocidadeAtual = 50; i <= 5; i++)
+      //{
+       // velocidadeAtual += 10;
+        //delay(500);
+        //Serial.print("Velocidade Atual: ");
+        //Serial.print(velocidadeAtual);
+      //} 
+       // verificadorDeVez = true;
+    //} 
+  //}
+  //Reto();
+//}
+//void Reto()
+//{
+ // Serial.println("Carro reto");
+
+  //int i = 0;
+
+ // for(velocidadeAtual = 30; i <= 2; i--)
+  //{
+   // velocidadeAtual += 10;
+    //delay(1000);
+    //Serial.println("VelocidadeAtual: ");
+    //Serial.print(velocidadeAtual);
+  //}
+//}
+
+void ControleDeVelocidade() {
+  long newCount = encoder.getCount();
+  long delta = newCount - lastCount;
+
+  if (delta != 0) {
+    Serial.print("Pulsos: ");
+    Serial.println(newCount);
+    lastCount = newCount;
+  }
+}
+
+
+void loop() {
+  // int sensorPin = 5
+  // int inclinado = digitalRead(sensorPin);
+
+  // if (inclinado == LOW) 
+  // {
+  //   Inclinado();
+  // } 
+  ControleDeVelocidade();
+  
+  if (Serial.available() > 0) {
+    char command = Serial.read();
+
+    if (command == '1') {
+      Iniciar();
+    } else if (command == '2') {
+      Parar();
+    } else if (command == '3') {
+      MarchaRe();
+    } else if (command == '+') {
+      Acelerar();
+    } else if (command == '-') {
+      Diminuir();
     }
   }
-
-  if (ESP_BT.available()) {
+    if (ESP_BT.available()) {
     char receivedValue = ESP_BT.read();
     Serial.write(receivedValue);
 
-    if (receivedValue == '1') {
-      Stop();
+        if (receivedValue == '1') {
+      Iniciar();
+    } else if (receivedValue == '2') {
+      Parar();
+    } else if (receivedValue == '3') {
+      MarchaRe();
+    } else if (receivedValue == '+') {
+      Acelerar();
+    } else if (receivedValue == '-') {
+      Diminuir();
     }
-    else if (receivedValue == '2') {
-      Forward();
+
+
     }
-    else if (receivedValue == '3') {
-      Reverse();
-      
-      // Adicione este código para acender o LED D2 quando a variável 3 for recebida
-      digitalWrite(blueLedPin, HIGH);
-    }
-    else if (receivedValue == '+') {
-      IncreaseSpeed();
-    }
-    else if (receivedValue == '-') {
-      DecreaseSpeed();
-      
-    }
+  //float distancia = ultrasonic.read();
+  //Serial.println(distancia);
   
+  //delay(100);
+  //if (distancia < 50 && distancia> 0) {
+    //Parar();
+    //identificou = 1;
+    //delay(3000);
+  //} else if(identificou == 1 && distancia > 100){
+    //  delay(3000);
+      //Iniciar();
+      //identificou = 0;
+  //}
 
-  } 
-  float distancia = ultrasonic.read();
-  Serial.println(distancia);
-  delay(100);
-  if (distancia < 30 && distancia> 0) {
-    Stop();
-  }
-
-
-
-
-}
-
-void Stop() {
-  Serial.println("Stop");
-  usMotor_Status = BRAKE;
-  motorGo(MOTOR_1, usMotor_Status, 0);
-  motorGo(MOTOR_2, usMotor_Status, 0);
-}
-
-void Forward() {
-  Serial.println("Forward");
-  usMotor_Status = CW;
-  motorGo(MOTOR_1, usMotor_Status, usSpeed);
-  motorGo(MOTOR_2, usMotor_Status, usSpeed);
-}
-
-void Reverse() {
-  Serial.println("Reverse");
-  usMotor_Status = CCW;
-  motorGo(MOTOR_1, usMotor_Status, usSpeed);
-  motorGo(MOTOR_2, usMotor_Status, usSpeed);
-}
-
-void IncreaseSpeed() {
-  usSpeed += 10;
-  if (usSpeed > 255) {
-    usSpeed = 70;
-  }
-
-  Serial.print("Speed +: ");
-  Serial.println(usSpeed);
-
-  motorGo(MOTOR_1, usMotor_Status, usSpeed);
-  motorGo(MOTOR_2, usMotor_Status, usSpeed);
-}
-
-void DecreaseSpeed() {
-  usSpeed -= 10;
-  if (usSpeed < 0) {
-    usSpeed = 0;
-  }
-
-  Serial.print("Speed -: ");
-  Serial.println(usSpeed);
-
-  motorGo(MOTOR_1, usMotor_Status, usSpeed);
-  motorGo(MOTOR_2, usMotor_Status, usSpeed);
-}
-
-void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm) {
-  if (motor == MOTOR_1) {
-    if (direct == CW) {
-      digitalWrite(MOTOR_A1_PIN, LOW);
-      digitalWrite(MOTOR_B1_PIN, HIGH);
-    }
-    else if (direct == CCW) {
-      digitalWrite(MOTOR_A1_PIN, HIGH);
-      digitalWrite(MOTOR_B1_PIN, LOW);
-    }
-    else {
-      digitalWrite(MOTOR_A1_PIN, LOW);
-      digitalWrite(MOTOR_B1_PIN, LOW);
-    }
-
-    analogWrite(PWM_MOTOR_1, pwm);
-  }
-  else if (motor == MOTOR_2) {
-    if (direct == CW) {
-      digitalWrite(MOTOR_A2_PIN, LOW);
-      digitalWrite(MOTOR_B2_PIN, HIGH);
-    }
-    else if (direct == CCW) {
-      digitalWrite(MOTOR_A2_PIN, HIGH);
-      digitalWrite(MOTOR_B2_PIN, LOW);
-    }
-    else {
-      digitalWrite(MOTOR_A2_PIN, LOW);
-      digitalWrite(MOTOR_B2_PIN, LOW);
-    }
-
-    analogWrite(PWM_MOTOR_2, pwm);
-  }
 }
