@@ -1,5 +1,7 @@
 #include <AccelStepper.h>
-
+#include <BluetoothSerial.h>
+BluetoothSerial ESP_BT;
+#include <Ultrasonic.h> 
 const int stepPin = 18; 
 const int dirPin = 19; 
 const int enPin = 21;
@@ -7,9 +9,11 @@ const int enPin = 21;
 AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin);
 
 void setup() {
+
   Serial.begin(115200); // Iniciar a comunicação serial
   Serial.println("Aguardando comando pela porta serial...");
-
+  ESP_BT.begin("ESP32_BT Pedro");
+  Serial.println("Bluetooth Device is Ready to Pair");
   pinMode(stepPin, OUTPUT); 
   pinMode(dirPin, OUTPUT);
   pinMode(enPin, OUTPUT);
@@ -21,19 +25,79 @@ void setup() {
 }
 
 void loop() {
-  if (Serial.available() > 0) { // Verificar se há dados disponíveis na porta serial
+  
+    if (Serial.available() > 0) { // Verificar se há dados disponíveis na porta serial
     char command = Serial.read(); // Ler o comando da porta serial
+ 
     
     if (command == 'E' || command == 'e') {
-      stepper.moveTo(stepper.currentPosition() - 100); // Move 100 passos para a esquerda
+      stepper.moveTo(stepper.currentPosition() - 300); // Move 100 passos para a esquerda
       stepper.runToPosition(); // Move gradualmente para a nova posição
     } 
     else if (command == 'D' || command == 'd') {
-      stepper.moveTo(stepper.currentPosition() + 100); // Move 100 passos para a direita
+      stepper.moveTo(stepper.currentPosition() + 300); // Move 100 passos para a direita
       stepper.runToPosition(); // Move gradualmente para a nova posição
+    
+    }
+      if (command == 'l') {
+      stepper.moveTo(stepper.currentPosition() - 300); // Move 100 passos para a esquerda
+      stepper.runToPosition(); // Move gradualmente para a nova posição
+    } 
+    else if (command == 'r') {
+      stepper.moveTo(stepper.currentPosition() + 300); // Move 100 passos para a direita
+      stepper.runToPosition(); // Move gradualmente para a nova posição
+    
+    }
+          if (command == 'f') {
+      stepper.moveTo(stepper.currentPosition() - 200); // Move 100 passos para a esquerda
+      stepper.runToPosition(); // Move gradualmente para a nova posição
+    } 
+    else if (command == 'p') {
+      stepper.moveTo(stepper.currentPosition() + 200); // Move 100 passos para a direita
+      stepper.runToPosition(); // Move gradualmente para a nova posição
+    
     }
     else {
       Serial.println("Erro: Comando inválido recebido pela porta serial");
     }
   }
+    if (ESP_BT.available()) {
+    char receivedValue = ESP_BT.read();
+    Serial.write(receivedValue);
+
+    if (receivedValue == 'E' || receivedValue == 'e') {
+      stepper.moveTo(stepper.currentPosition() - 400); // Move 100 passos para a esquerda
+      stepper.runToPosition(); // Move gradualmente para a nova posição
+    } 
+    else if (receivedValue == 'D' || receivedValue == 'd') {
+      stepper.moveTo(stepper.currentPosition() + 400); // Move 100 passos para a direita
+      stepper.runToPosition(); // Move gradualmente para a nova posição
+    
+    }
+      if (receivedValue == 'l') {
+      stepper.moveTo(stepper.currentPosition() - 200); // Move 100 passos para a esquerda
+      stepper.runToPosition(); // Move gradualmente para a nova posição
+    } 
+    else if (receivedValue == 'r') {
+      stepper.moveTo(stepper.currentPosition() + 200); // Move 100 passos para a direita
+      stepper.runToPosition(); // Move gradualmente para a nova posição
+    
+    }
+          if (receivedValue == 'f') {
+      stepper.moveTo(stepper.currentPosition() - 200); // Move 100 passos para a esquerda
+      stepper.runToPosition(); // Move gradualmente para a nova posição
+    } 
+    else if (receivedValue == 'p') {
+      stepper.moveTo(stepper.currentPosition() + 200); // Move 100 passos para a direita
+      stepper.runToPosition(); // Move gradualmente para a nova posição
+    
+    }
+    else {
+      Serial.println("Erro: Comando inválido recebido pela porta serial");
+    }
+
+
+    }
+
+
 }
